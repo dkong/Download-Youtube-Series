@@ -87,11 +87,15 @@ def DownloadFLV(videoID):
     Log("test URL: " + flvURL + "\n")
     Log("FLV INFO: " + str(flvInfo) + "\n")
 
+    localFLV = os.path.join(WORKING_DIR, videoID + ".flv")
+    if os.path.exists(localFLV):
+        Log("FLV %s already exists locally.  Skipping download\n" % localFLV)
+        return flvInfo
+    
     if not skipDownload:
         flvSource = urllib.urlopen(flvURL)
         Log("Opening URL: %s\n" % flvURL)
 
-        localFLV = os.path.join(WORKING_DIR, videoID + ".flv")
         flvDest = open(localFLV, 'wb')
         Log("Created local file: %s\n" % localFLV)
                         
@@ -118,11 +122,19 @@ def slugify(value):
     return re.sub('[-\s]+', '-', value)        
 
 def ConvertFLVtoMP3(flvFile, mp3File):
+    if os.path.exists(mp3File):
+        Log("MP3 %s already exists locally.  Skipping conversion\n" % mp3File)
+        return 0
+    
     command = 'ffmpeg.exe -y -i "%s" -vn "%s"' % (flvFile, mp3File)
     Log( "Running command %s" % command )
     return os.system(command)
 
 def ConvertFLVtoMP4(flvFile, mp4File):
+    if os.path.exists(mp4File):
+        Log("MP4 %s already exists locally.  Skipping conversion\n" % mp4File)
+        return 0
+
     command = 'ffmpeg.exe -i "%s" -ar 22050 "%s"' % (flvFile, mp4File)
     Log( "Running command %s" % command )
     return os.system(command)
@@ -155,13 +167,11 @@ def Main():
     Log("localMP3: " + localMP3 + "\n")
     Log("localMP4: " + localMP4 + "\n")
 
-    if convertMP4:    
-        if ConvertFLVtoMP4(localFLV, localMP4) == 0:
-            OpeniTunes(localMP4)
+    if convertMP4 and ConvertFLVtoMP4(localFLV, localMP4) == 0:
+        OpeniTunes(localMP4)
 
-    if convertMP3:
-        if ConvertFLVtoMP3(localFLV, localMP3) == 0:
-            OpeniTunes(localMP3)
+    if convertMP3 and ConvertFLVtoMP3(localFLV, localMP3) == 0:
+        OpeniTunes(localMP3)
 
     CloseLog()                
 
