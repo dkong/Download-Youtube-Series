@@ -88,7 +88,7 @@ def DownloadFLV(videoID):
     Log("FLV INFO: " + str(flvInfo) + "\n")
 
     localFLV = os.path.join(WORKING_DIR, videoID + ".flv")
-    if os.path.exists(localFLV):
+    if os.path.exists(localFLV) and (os.path.getsize(localFLV) > 0):
         Log("FLV %s already exists locally.  Skipping download\n" % localFLV)
         return flvInfo
     
