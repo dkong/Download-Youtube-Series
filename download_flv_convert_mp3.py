@@ -157,7 +157,12 @@ def Main():
     flvInfo = DownloadFLV(youtubeID)
     youtubeTitle = flvInfo['title']
     Log("Youtube Video Title: " + youtubeTitle + "\n")
-    filename = slugify(unicode(youtubeTitle))
+
+    try:
+        unicode_filename = unicode(youtubeTitle)
+    except:
+        unicode_filename = unicode(youtubeID)
+    filename = slugify(unicode_filename)
     Log("slugify filename: " + filename + "\n")
 
     localFLV = os.path.join(WORKING_DIR, youtubeID+'.flv')
