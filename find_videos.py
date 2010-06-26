@@ -13,14 +13,18 @@ import subprocess
 
 testing = False
 
-usage = 'usage: python %s [options] <youtube_playlist_id>' % sys.argv[0]
+usage = 'usage: python %s [options]' % sys.argv[0]
 parser = OptionParser(usage=usage)
+parser.add_option('-p', '--playlist-id', dest='playlist_id', help='Youtube playlist ID')
 parser.add_option('-s', '--source-dir', dest='source_dir', help='Location to store FLV files downloaded from Youtube', default='./source')
 parser.add_option('-o', '--output-dir', dest='output_dir', help='Location to store converted MP4 files', default='./output')
 parser.add_option('-c', '--concurrent-downloads', dest='concurrent_downloads', help='Maximum simultaneous downloads from Youtube', default=1)
 parser.add_option('-b', '--bitrate', dest='bitrate', help='Bitrate setting when converting FLV to MP4', default=300)
 parser.add_option('--min', type='float', help='Bitrate setting when converting FLV to MP4')
 parser.add_option('--max', type='float', help='Bitrate setting when converting FLV to MP4')
+parser.add_option('--user')
+parser.add_option('--series')
+parser.add_option('--part-match')
 
 yt_service = gdata.youtube.service.YouTubeService()
 yt_service.ssl = False
@@ -28,27 +32,43 @@ yt_service.ssl = False
 def MakeUploadURI(username, start_index=1, max_results=50):
     return "http://gdata.youtube.com/feeds/api/users/%s/uploads?start-index=%d&max_results=%d" % (username, start_index, max_results)
 
-def PrintFeed(feed, match_title):
+def PrintFeed(feed, match_title, match_episode):
     for entry in feed.entry:
         title = entry.media.title.text
-        if title.find(match_title) != -1:
+        if re.search(match_title, title, re.IGNORECASE):
+        #if title.find(match_title) != -1:
+            #if match_episode and title.find(match_episode) == -1:
+            if match_episode and not re.search(match_episode, title, re.IGNORECASE):
+                continue
+
+            title = title.replace('/', '_')
+            url = entry.media.player.url
+            flvUrl = GetFLVURL(url)
+            filename = os.path.join(options.source_dir, title + '.flv')
+            output_filename = os.path.join(options.output_dir, title + '.mp4')
+        
+            """
             print title
+            print url
+            print
+            """
+            Download(flvUrl, filename)
+            ConvertVideo(filename, output_filename)
 
     return len(feed.entry)
 
-def PrintUploadsByUser(username, match_title):
+def PrintUploadsByUser(username, match_title, match_episode):
     start_index = 1
     max_results_per_request = 25
     max_results = 7500
 
     while True:
         uri = MakeUploadURI(username, start_index, max_results_per_request)
-        print uri
         feed = yt_service.GetYouTubeVideoFeed(uri)
         if not feed:
             break
 
-        feed_entries = PrintFeed(feed, match_title)
+        feed_entries = PrintFeed(feed, match_title, match_episode)
         if feed_entries == 0:
             break
 
@@ -69,6 +89,22 @@ def SearchAndPrint(search_terms):
 #SearchAndPrint("chlorng phub")
 
 playlistList = []
+
+def Download(source, dest):
+    if not os.path.exists(dest):
+        cmd = 'curl -L -o "%s" "%s"' % (dest, source)
+        print cmd
+        if not testing:
+            exit_code = os.system(cmd)
+            print 'exit_code', exit_code
+
+def ConvertVideo(source, dest):
+    if not os.path.exists(dest):
+        convert_cmd = 'ffmpeg -i "%s" -b %dkb/s "%s"' % (source, options.bitrate, dest)
+        print convert_cmd
+        if not testing:
+            exit_code = os.system(convert_cmd)
+            print 'exit_code', exit_code
 
 def QueryPlaylist(playlistID, max_results, start_index):
     playlist_uri = 'http://gdata.youtube.com/feeds/api/playlists/%s?max-results=%d&start-index=%d' % (playlistID, max_results, start_index)
@@ -137,13 +173,14 @@ def ValidArgs():
 
 if __name__ == '__main__':
     (options, args) = parser.parse_args()
-    if len(args) != 1:
-        print parser.print_usage()
-        sys.exit(-1)
 
     if not ValidArgs():
         sys.exit(-1)
 
-    playlistID = args[0]
-    QueryPlaylist(playlistID, 50, 1)
-    #PrintPlaylist()
+    if options.playlist_id:
+        playlistID = args[0]
+        QueryPlaylist(playlistID, 50, 1)
+
+    if options.user and options.series:
+        #PrintUploadsByUser('Mzchandany978', 'Snaeh oun lurs ge')
+        PrintUploadsByUser(options.user, options.series, options.part_match)

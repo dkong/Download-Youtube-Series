@@ -5,23 +5,17 @@ import re
 import sys
 import os
 import subprocess
-import win32com.client
+#import win32com.client
 
 YOUTUBE_RE1 = r'http:\/\/www\.youtube\.com\/watch(\?|#!|#)v(ideos)?=([\w-]+)'
 YOUTUBE_RE2 = r'http:\/\/www\.youtube\.com\/user\/\w+#(.\/)+([\w-]+)'
-WORKING_DIR = "c:\\youtube\\"
+WORKING_DIR = "."
 
 skipDownload = False
 convertMP3 = True
-convertMP4 = True
+convertMP4 = False
 
 logFile = None
-
-if len(sys.argv) != 2:
-    print "Wrong number of arguments.  Exiting..."
-    sys.exit(1)
-        
-youtubeURL = sys.argv[1]
 
 def CreateLog(video_id):
     global logFile
@@ -126,7 +120,7 @@ def ConvertFLVtoMP3(flvFile, mp3File):
         Log("MP3 %s already exists locally.  Skipping conversion\n" % mp3File)
         return 0
     
-    command = 'ffmpeg.exe -y -i "%s" -vn "%s"' % (flvFile, mp3File)
+    command = 'ffmpeg -y -i "%s" -vn "%s"' % (flvFile, mp3File)
     Log( "Running command %s" % command )
     return os.system(command)
 
@@ -141,10 +135,10 @@ def ConvertFLVtoMP4(flvFile, mp4File):
 
 def OpeniTunes(filename):
     Log("Opening iTunes with %s\n" % filename)
-    iTunes = win32com.client.gencache.EnsureDispatch("iTunes.Application")
-    iTunes.PlayFile(filename)
+    #iTunes = win32com.client.gencache.EnsureDispatch("iTunes.Application")
+    #iTunes.PlayFile(filename)
 
-def Main():
+def Main(youtubeURL):
     youtubeID = GetYoutubeVideoIDFromURL(youtubeURL)
     if youtubeID == None:
         print "Unable to parse regex for url: %s\n" % (youtubeURL)
@@ -180,4 +174,19 @@ def Main():
 
     CloseLog()                
 
-Main()
+def GetFLVURL(youtubeURL):
+    youtubeID = GetYoutubeVideoIDFromURL(youtubeURL)
+    if youtubeID == None:
+        print "Unable to parse regex for url: %s\n" % (youtubeURL)
+        sys.exit(1)
+
+    flvURL, flvInfo = GetYoutubeVideoInfo(youtubeID)
+    return flvURL
+
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print "Wrong number of arguments.  Exiting..."
+        sys.exit(1)
+        
+    youtubeURL = sys.argv[1]
+    Main(youtubeURL)
